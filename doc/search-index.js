@@ -1,0 +1,4 @@
+var searchIndex = JSON.parse('{\
+"b15f":{"doc":"Driver code for the board 15","t":[0,3,11,11,11,11,11,11,11,11,11,11],"n":["b15f","B15F","borrow","borrow_mut","fmt","from","get_board_info","into","new","try_from","try_into","type_id"],"q":["b15f","b15f::b15f","","","","","","","","","",""],"d":["This module contains all the structures and functions …","Structure representing the driver for the board 15","","","","Returns the argument unchanged.","Yields information about the installed firmware on the B15","Calls <code>U::from(self)</code>.","Creates a new instance of the B15","","",""],"i":[0,0,1,1,1,1,1,1,1,1,1,1],"f":[null,null,[[["",0]],["",0]],[[["",0]],["",0]],[[["",0],["formatter",3]],["result",6]],[[]],[[["",0]],["vec",3,[["str",0]]]],[[]],[[],["result",4,[["b15f",3],["str",0]]]],[[],["result",4]],[[],["result",4]],[[["",0]],["typeid",3]]],"p":[[3,"B15F"]]}\
+}');
+if (window.initSearch) {window.initSearch(searchIndex)};
