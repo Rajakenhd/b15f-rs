@@ -10,4 +10,4 @@ name = "b15f"
 path = "src/lib.rs"
 
 [dependencies]
-
+serialport = "4.2.0"

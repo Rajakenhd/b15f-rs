@@ -14,4 +14,6 @@
 //! [`original`]: https://github.com/devfix/b15f
 
 pub mod b15f;
+mod request;
+
 pub use crate::b15f::B15F;
