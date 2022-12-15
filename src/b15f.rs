@@ -2,13 +2,11 @@
 //! interacting with the B15 on a high level. If you are writing code
 //! for the B15, this is the module you want to use.
 
-use std::{process::Command, time::Duration, fmt::{Debug, Display}, thread::sleep, error::Error};
+use std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
+use rand::Rng;
 use serialport::SerialPort;
 
-use crate::request::Request;
-
-/// Hardcoded commit hash of the most recent firmware
-static COMMIT_HASH: &'static str = "bc459c80cec755d7df2c11a807d74e085cbed332";
+use crate::{request::Request, build_request};
 
 macro_rules! log {
 	($text: literal, $($arg:tt)*) => (println!(concat!("[B15F] ", $text), $($arg)*));
@@ -31,6 +29,8 @@ pub struct B15F {
 }
 
 impl B15F {
+	const MSG_OK: u8 = 0xFF;
+
 	/// Creates a new instance of the B15
 	/// 
 	/// This function will establish a connection to a connected B15 and return
@@ -52,19 +52,32 @@ impl B15F {
 		};
 
 		log_start!("Testing connection");
-		for tries in 0..3 {
+		let mut tries = 3;
+		while tries > 0 {
 			drv.discard();
+
+			match drv.test_connection() {
+				Ok(()) => break,
+				Err(_) => {} // Do nothing
+			};
+
+			tries -= 1;
 		}
+
+		if tries == 0 {
+			panic!("Testing connection failed!");
+		}
+		
 		log_end!("Ok!");
 
 		let info = drv.get_board_info();
 		log!("AVR firmware version: {} built at {} ({})", info[0], info[1], info[2]);
 
-		let avr_commit_hash = info[3];
-		if avr_commit_hash != COMMIT_HASH {
-			log!("Different commit hashes: {} vs {}", avr_commit_hash, COMMIT_HASH);
-			return Err("Versions incompatible. Please update the software!".into());
-		}
+		// let avr_commit_hash = info[3];
+		// if avr_commit_hash != COMMIT_HASH {
+		// 	log!("Different commit hashes: {} vs {}", avr_commit_hash, COMMIT_HASH);
+		// 	return Err("Versions incompatible. Please update the software!".into());
+		// }
 
 		Ok(drv)
 	}
@@ -112,14 +125,32 @@ impl B15F {
 
 	/// Clears data in the USART buffers on this device and on the B15
 	pub fn discard(&mut self) {
+		// TODO: In general, unwrap() will cause panic on failure and crash the application.
+		// It would be better to implement error handling
 		self.usart.clear(serialport::ClearBuffer::Output).unwrap();
 
-		for i in 0..16 {
-			self.usart.write(&Request::new().discard().done()[..]).unwrap();
+		for _ in 0..16 {
+			self.usart.write(build_request![Request::Discard]).unwrap();
 			sleep(Duration::from_millis(4));
 		}
 
 		self.usart.clear(serialport::ClearBuffer::Input).unwrap()
+	}
+
+	/// Tests the connetion to the B15
+	pub fn test_connection(&mut self) -> Result<(), String> {
+		let dummy: u8 = rand::thread_rng().gen_range(0x00..=0xFF);
+
+		self.usart.write(build_request![Request::Test, dummy]).unwrap();
+		
+		let mut buffer: [u8; 2]= [0; 2];
+		self.usart.read(&mut buffer).unwrap();
+
+		if buffer[0] != B15F::MSG_OK || buffer[1] != dummy {
+			panic!("Test request failed");
+		}
+
+		Ok(())
 	}
 
 	#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
