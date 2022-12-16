@@ -119,8 +119,31 @@ impl B15F {
 	/// 	.iter()
 	/// 	.for_each(|info| println!("{info}"));
 	/// ```
-	pub fn get_board_info(&self) -> Vec<&str> {
-		todo!();
+	pub fn get_board_info(&mut self) -> Vec<String> {
+		let mut info: Vec<String> = vec![];
+
+		self.usart.write(build_request!(Request::Info)).unwrap();
+
+		let mut data_count: [u8; 1] = [0;1];
+		self.usart.read(&mut data_count).unwrap();
+
+		while data_count[0] > 0 {
+			let mut len: [u8; 1] = [0;1];
+			self.usart.read(&mut len).unwrap();
+
+			let mut data: Vec<u8> = vec![0; len[0] as usize];
+			self.usart.read(data.as_mut_slice()).unwrap();
+
+			info.push(
+				data.into_iter()
+					.map(|c| char::from(c))
+					.collect::<String>()
+			);
+
+			data_count[0] -= 1;
+		}
+
+		info
 	}
 
 	/// Clears data in the USART buffers on this device and on the B15
