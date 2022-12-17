@@ -8,8 +8,9 @@ bench:
 	cargo bench
 
 doc:
-	cargo doc
 	rm -rf doc
+	rm -rf target/doc
+	cargo doc --no-deps
 	cp -r target/doc .
 
 all: b15f test

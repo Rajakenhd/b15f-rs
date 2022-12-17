@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["B15F","Structure representing the driver for the board 15"]]});
+window.SIDEBAR_ITEMS = {"struct":[["B15F","Structure representing the driver for the board 15"]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["b15f","This module contains all the structures and functions related to interacting with the B15 on a high level. If you are writing code for the B15, this is the module you want to use."]]});
+window.SIDEBAR_ITEMS = {"macro":[["build_request","Builds a new request buffer from the given data"]],"mod":[["b15f","This module contains all the structures and functions related to interacting with the B15 on a high level. If you are writing code for the B15, this is the module you want to use."]]};
