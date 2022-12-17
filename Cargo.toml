@@ -12,4 +12,3 @@ path = "src/lib.rs"
 [dependencies]
 serialport = "4.2.0"
 rand = "0.8.5"
-

@@ -5,9 +5,8 @@
 use std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
 use rand::Rng;
 use serialport::SerialPort;
-use crate::error::Error;
 
-use crate::{request::Request, build_request};
+use crate::{assert::assert_in_range, error::Error, request::Request, build_request};
 
 macro_rules! log {
 	($text: literal, $($arg:tt)*) => (println!(concat!("[B15F] ", $text), $($arg)*));
@@ -125,11 +124,11 @@ impl B15F {
 	/// 
 	/// # Examples
 	/// 
-	pub fn digital_write<const port: u8> (&mut self, value: u8) -> Result<(), Error> {
-		assert!(port == 0 || port == 1);
+	pub fn digital_write<const PORT: usize> (&mut self, value: u8) -> Result<(), Error> {
+		assert_in_range::<PORT, 0, 1>();
 
 		let reversed = value.reverse_bits();
-		let request = if port == 0 { Request::DigitalWrite0 } else { Request::DigitalWrite1 };
+		let request = if PORT == 0 { Request::DigitalWrite0 } else { Request::DigitalWrite1 };
 
 		self.usart.write(build_request![request, reversed])?;
 
@@ -137,7 +136,7 @@ impl B15F {
 		self.usart.read(&mut aw)?;
 
 		if aw[0] != B15F::MSG_OK {
-			return Err(format!("Setting Port {} failed", port).into());
+			return Err(format!("Setting Port {} failed", PORT).into());
 		}
 
 		Ok(())

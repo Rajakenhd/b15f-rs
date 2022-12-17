@@ -16,5 +16,6 @@
 pub mod b15f;
 mod request;
 mod error;
+mod assert;
 
 pub use crate::b15f::B15F;
