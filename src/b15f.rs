@@ -5,6 +5,7 @@
 use std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
 use rand::Rng;
 use serialport::SerialPort;
+use crate::error::Error;
 
 use crate::{request::Request, build_request};
 
@@ -44,7 +45,7 @@ impl B15F {
 	/// 
 	/// let drv = B15F::new().unwrap();
 	/// ```
-	pub fn new() -> Result<B15F, String> {
+	pub fn new() -> Result<B15F, Error> {
 		let port = B15F::init_connection()?;
 
 		let mut drv =B15F {
@@ -54,7 +55,7 @@ impl B15F {
 		log_start!("Testing connection");
 		let mut tries = 3;
 		while tries > 0 {
-			drv.discard();
+			drv.discard()?;
 
 			match drv.test_connection() {
 				Ok(()) => break,
@@ -65,12 +66,12 @@ impl B15F {
 		}
 
 		if tries == 0 {
-			panic!("Testing connection failed!");
+			return Err("Connection test failed. Are you using the newest version?".into());
 		}
 		
 		log_end!("Ok!");
 
-		let info = drv.get_board_info();
+		let info = drv.get_board_info()?;
 		log!("AVR firmware version: {} built at {} ({})", info[0], info[1], info[2]);
 
 		// let avr_commit_hash = info[3];
@@ -82,7 +83,7 @@ impl B15F {
 		Ok(drv)
 	}
 
-	fn init_connection() -> Result<Box<dyn SerialPort>, String> {
+	fn init_connection() -> Result<Box<dyn SerialPort>, Error> {
 		let devices = B15F::get_devices();
 
 		let device = match devices.first() {
@@ -96,8 +97,7 @@ impl B15F {
 		
 		let port = serialport::new(device, 57_600)
 											.timeout(Duration::from_millis(1000))
-											.open()
-											.map_err(|err| err.to_string())?;
+											.open()?;
 		log_end!("Ok!");
 
 		Ok(port)
@@ -112,27 +112,28 @@ impl B15F {
 	/// ```
 	/// use b15f::B15F;
 	/// 
-	/// let drv = B15F::new().unwrap();
+	/// let mut drv = B15F::new().unwrap();
 	/// 
 	/// // Print each bit of information on a new line
 	/// drv.get_board_info()
+	/// 	.unwrap()
 	/// 	.iter()
 	/// 	.for_each(|info| println!("{info}"));
 	/// ```
-	pub fn get_board_info(&mut self) -> Vec<String> {
+	pub fn get_board_info(&mut self) -> Result<Vec<String>, Error> {
 		let mut info: Vec<String> = vec![];
 
-		self.usart.write(build_request!(Request::Info)).unwrap();
+		self.usart.write(build_request!(Request::Info))?;
 
 		let mut data_count: [u8; 1] = [0;1];
-		self.usart.read(&mut data_count).unwrap();
+		self.usart.read(&mut data_count)?;
 
 		while data_count[0] > 0 {
 			let mut len: [u8; 1] = [0;1];
-			self.usart.read(&mut len).unwrap();
+			self.usart.read(&mut len)?;
 
 			let mut data: Vec<u8> = vec![0; len[0] as usize];
-			self.usart.read(data.as_mut_slice()).unwrap();
+			self.usart.read(data.as_mut_slice())?;
 
 			info.push(
 				data.into_iter()
@@ -140,37 +141,62 @@ impl B15F {
 					.collect::<String>()
 			);
 
+			sleep(Duration::from_millis(4));	// Add delay to give the board time to catch up with our requests			
 			data_count[0] -= 1;
 		}
 
-		info
+		let mut aw: [u8; 1] = [0; 1];		
+		self.usart.read(&mut aw)?;		
+
+		if aw[0] != B15F::MSG_OK {
+			return Err(format!("Board info is faulty: code {}", aw[0]).into());
+		}		
+
+		Ok(info)
 	}
 
 	/// Clears data in the USART buffers on this device and on the B15
-	pub fn discard(&mut self) {
-		// TODO: In general, unwrap() will cause panic on failure and crash the application.
-		// It would be better to implement error handling
-		self.usart.clear(serialport::ClearBuffer::Output).unwrap();
+	pub fn discard(&mut self) -> Result<(), Error> {
+		self.usart.clear(serialport::ClearBuffer::Output)?;
 
 		for _ in 0..16 {
-			self.usart.write(build_request![Request::Discard]).unwrap();
+			self.usart.write(build_request![Request::Discard])?;
 			sleep(Duration::from_millis(4));
 		}
 
-		self.usart.clear(serialport::ClearBuffer::Input).unwrap()
+		self.usart.clear(serialport::ClearBuffer::Input)?;
+
+		Ok(())
 	}
 
 	/// Tests the connetion to the B15
-	pub fn test_connection(&mut self) -> Result<(), String> {
+	/// 
+	/// To test the connection a `Request::Test` request will be sent
+	/// to the board together with a randomly generated value. If the
+	/// board returns that value the connection is working correctly.
+	/// 
+	/// ## Examples
+	/// ```
+	/// use b15f::B15F;
+	/// 
+	/// fn main() {
+	/// 	let mut drv = B15F::new().unwrap();
+	/// 	
+	/// 	if let Err(err) = drv.test_connection() {
+	/// 		panic!("Connection is not working: {err}");
+	/// 	}
+	/// }
+	/// ```
+	pub fn test_connection(&mut self) -> Result<(), Error> {
 		let dummy: u8 = rand::thread_rng().gen_range(0x00..=0xFF);
 
-		self.usart.write(build_request![Request::Test, dummy]).unwrap();
+		self.usart.write(build_request![Request::Test, dummy])?;
 		
 		let mut buffer: [u8; 2]= [0; 2];
-		self.usart.read(&mut buffer).unwrap();
+		self.usart.read(&mut buffer)?;
 
 		if buffer[0] != B15F::MSG_OK || buffer[1] != dummy {
-			panic!("Test request failed");
+			return Err("Test request failed".into());
 		}
 
 		Ok(())

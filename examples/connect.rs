@@ -1,9 +1,11 @@
-use std::error::Error;
-
 use b15f::B15F;
 
-fn main() -> Result<(), Box<dyn Error>>{
-	let drv = B15F::new()?;
-
-	Ok(())
+fn main() {
+	let _drv = match B15F::new() {
+		Ok(val) => val,
+		Err(error) => {
+			eprintln!("{error}");
+			return;
+		}
+	};
 }

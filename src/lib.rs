@@ -15,5 +15,6 @@
 
 pub mod b15f;
 mod request;
+mod error;
 
 pub use crate::b15f::B15F;
