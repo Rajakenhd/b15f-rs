@@ -17,7 +17,11 @@ macro_rules! build_request {
 
 #[repr(u8)]
 pub enum Request {
-	Discard = 0,
-	Test 	= 1,
-	Info 	= 2
+	Discard 		= 0,
+	Test 			= 1,
+	Info 			= 2,
+	IntTest			= 3,
+
+	DigitalWrite0 	= 5,
+	DigitalWrite1 	= 6,
 }

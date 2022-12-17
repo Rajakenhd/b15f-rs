@@ -39,6 +39,14 @@ impl B15F {
 	/// program; calling `B15F::new()` more than once might lead to unexpected
 	/// behaviour.
 	/// 
+	/// # Returns
+	/// A new B15F object is returned. It contains an already active USART connection,
+	/// so calling this function multiple times will create an Error
+	/// 
+	/// # Errors
+	/// An `error::Error` is generated if the connection to the board cannot be
+	/// established, or if testing of that connection fails.
+	/// 
 	/// # Examples
 	/// ```
 	/// use b15f::B15F;
@@ -61,6 +69,11 @@ impl B15F {
 				Ok(()) => break,
 				Err(_) => {} // Do nothing
 			};
+
+			match drv.test_int_conv() {
+				Ok(()) => break,
+				Err(_) => {}
+			}
 
 			tries -= 1;
 		}
@@ -103,10 +116,45 @@ impl B15F {
 		Ok(port)
 	}
 
+	/// Sets the value of the specified port
+	///
+	/// # Errors 
+	/// `port` can either be 0 or 1, other values will cause a compile-time
+	/// error. Otherwise an `error::Error` is generated if communication
+	/// with the B15 fails.
+	/// 
+	/// # Examples
+	/// 
+	pub fn digital_write<const port: u8> (&mut self, value: u8) -> Result<(), Error> {
+		assert!(port == 0 || port == 1);
+
+		let reversed = value.reverse_bits();
+		let request = if port == 0 { Request::DigitalWrite0 } else { Request::DigitalWrite1 };
+
+		self.usart.write(build_request![request, reversed])?;
+
+		let mut aw: [u8; 1] = [0; 1];
+		self.usart.read(&mut aw)?;
+
+		if aw[0] != B15F::MSG_OK {
+			return Err(format!("Setting Port {} failed", port).into());
+		}
+
+		Ok(())
+	}
+
 	/// Yields information about the installed firmware on the B15
 	/// 
 	/// Returns an array of strings, where each string contains a piece
 	/// of information stored on the B15
+	/// 
+	/// # Returns
+	/// A list of strings where each string contains a piece of information
+	/// about the board. What string contains what information is determined,
+	/// but not explicitly listed.
+	/// 
+	/// # Errors
+	/// An `error::Error` is generated if the communication with the board fails.
 	/// 
 	/// # Examples
 	/// ```
@@ -169,13 +217,38 @@ impl B15F {
 		Ok(())
 	}
 
+	/// Test the integer conversion of the USART connection
+	///
+	/// # Errors
+	/// If an error occurs in the conversion or the communication with the
+	/// board, an `error::Error` will be returned.
+	pub fn test_int_conv(&mut self) -> Result<(), Error> {
+		let dummy: u16 = rand::thread_rng().gen_range(0x0000..=(0xFFFF / 3));
+		
+		self.usart.write(build_request!(Request::IntTest, dummy & 0xFF, dummy >> 8))?;
+
+		let mut aw: [u8; 2] = [0; 2];
+		self.usart.read(&mut aw)?;
+
+		let result = u16::from_le_bytes(aw);
+		if result != dummy * 3 {
+			return Err("Int conversion failed".into());
+		}
+
+		Ok(())
+	}
+	
 	/// Tests the connetion to the B15
 	/// 
 	/// To test the connection a `Request::Test` request will be sent
 	/// to the board together with a randomly generated value. If the
 	/// board returns that value the connection is working correctly.
 	/// 
-	/// ## Examples
+	/// # Errors
+	/// An `error::Error` is returned if the test fails, or if the 
+	/// communication itself fails.
+	/// 
+	/// # Examples
 	/// ```
 	/// use b15f::B15F;
 	/// 

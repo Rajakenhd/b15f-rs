@@ -21,6 +21,10 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module contains the request data used to communicate
 //! with the B15 via USART. 
 //! 
@@ -40,8 +44,12 @@
 
 <span class="attribute">#[repr(u8)]
 </span><span class="kw">pub enum </span>Request {
-	Discard = <span class="number">0</span>,
-	Test 	= <span class="number">1</span>,
-	Info 	= <span class="number">2
-</span>}</code></pre></div>
+	Discard 		= <span class="number">0</span>,
+	Test 			= <span class="number">1</span>,
+	Info 			= <span class="number">2</span>,
+	IntTest			= <span class="number">3</span>,
+
+	DigitalWrite0 	= <span class="number">5</span>,
+	DigitalWrite1 	= <span class="number">6</span>,
+}</code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="b15f" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0 (69f9c33d7 2022-12-12)" ></div></body></html>
