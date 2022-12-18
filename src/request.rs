@@ -21,7 +21,7 @@ pub enum Request {
 	Test 			= 1,
 	Info 			= 2,
 	IntTest			= 3,
-
+	SelfTest		= 4,
 	DigitalWrite0 	= 5,
 	DigitalWrite1 	= 6,
 	DigitalRead0	= 7,

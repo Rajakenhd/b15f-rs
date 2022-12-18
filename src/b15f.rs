@@ -115,6 +115,42 @@ impl B15F {
 		Ok(port)
 	}
 
+	/// Tries to reestablish a connection to the B15
+	pub fn reconnect(&mut self) -> Result<(), Error> {
+		let tries = 3;
+		while tries > 0 {
+			sleep(Duration::from_millis(64));
+			self.discard()?;
+
+			match self.test_connection() {
+				Ok(_) => return Ok(()),
+				Err(_) => { }
+			};
+
+		}
+
+		Err("Connection could not be repaired".into())		
+	}
+
+	/// Enables the self test mode of the B15
+	/// 
+	/// IMPORTANT: Nothing must be connected to the B15 during this self check
+	/// routine.
+	/// 
+	/// # Errors 
+	/// This function returns an `error::Error` when communication with
+	/// the board or the self check fails.
+	pub fn self_test(&mut self) -> Result<(), Error> {
+		self.usart.write(build_request!(Request::SelfTest))?;
+
+		let aw = read_sized::<1>(&mut self.usart)?;
+		if aw[0] != B15F::MSG_OK {
+			return Err("Self test failed".into())
+		}
+
+		Ok(())
+	}
+
 	/// Sets the value of the specified port
 	///
 	/// # Errors 
