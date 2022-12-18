@@ -6,7 +6,7 @@ use std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
 use rand::Rng;
 use serialport::SerialPort;
 
-use crate::{assert::assert_in_range, error::Error, request::Request, build_request};
+use crate::{assert::assert_in_range, error::Error, request::Request, usart::read_sized, build_request, read_typed};
 
 macro_rules! log {
 	($text: literal, $($arg:tt)*) => (println!(concat!("[B15F] ", $text), $($arg)*));
@@ -150,10 +150,8 @@ impl B15F {
 		
 		self.usart.write(build_request![request, reversed])?;
 
-		let mut aw: [u8; 1] = [0; 1];
-		self.usart.read(&mut aw)?;
-
-		if aw[0] != B15F::MSG_OK {
+		let aw: u8 = read_typed!(self.usart, u8);
+		if aw != B15F::MSG_OK {
 			return Err(format!("Setting Port {} failed", PORT).into());
 		}
 
@@ -195,10 +193,8 @@ impl B15F {
 		self.usart.clear(serialport::ClearBuffer::Input)?;
 		self.usart.write(build_request![request])?;
 
-		let mut aw: [u8; 1] = [0; 1];
-		self.usart.read(&mut aw)?;
-
-		Ok(u8::reverse_bits(aw[0]))
+		let aw: u8 = read_typed!(self.usart, u8);
+		Ok(u8::reverse_bits(aw))
 	}
 
 	/// Yields information about the installed firmware on the B15
@@ -251,11 +247,9 @@ impl B15F {
 			data_count[0] -= 1;
 		}
 
-		let mut aw: [u8; 1] = [0; 1];		
-		self.usart.read(&mut aw)?;		
-
-		if aw[0] != B15F::MSG_OK {
-			return Err(format!("Board info is faulty: code {}", aw[0]).into());
+		let aw: u8 = read_typed!(self.usart, u8);
+		if aw != B15F::MSG_OK {
+			return Err(format!("Board info is faulty: code {}", aw).into());
 		}		
 
 		Ok(info)
@@ -285,11 +279,8 @@ impl B15F {
 		
 		self.usart.write(build_request!(Request::IntTest, dummy & 0xFF, dummy >> 8))?;
 
-		let mut aw: [u8; 2] = [0; 2];
-		self.usart.read(&mut aw)?;
-
-		let result = u16::from_le_bytes(aw);
-		if result != dummy * 3 {
+		let aw: u16 = read_typed!(self.usart, u16);
+		if aw != dummy * 3 {
 			return Err("Int conversion failed".into());
 		}
 

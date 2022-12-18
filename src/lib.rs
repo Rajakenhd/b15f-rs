@@ -1,7 +1,6 @@
 #![deny(missing_docs,
     missing_debug_implementations,
     trivial_casts,
-    unsafe_code,
     unstable_features,
     unused_import_braces, unused_qualifications)]
 
@@ -14,6 +13,7 @@
 //! [`original`]: https://github.com/devfix/b15f
 
 pub mod b15f;
+mod usart;
 mod request;
 mod error;
 mod assert;
