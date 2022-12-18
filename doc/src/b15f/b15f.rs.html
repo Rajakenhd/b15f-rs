@@ -314,6 +314,64 @@
 <span id="314">314</span>
 <span id="315">315</span>
 <span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module contains all the structures and functions related to
 //! interacting with the B15 on a high level. If you are writing code
 //! for the B15, this is the module you want to use.
@@ -321,9 +379,8 @@
 </span><span class="kw">use </span>std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
 <span class="kw">use </span>rand::Rng;
 <span class="kw">use </span>serialport::SerialPort;
-<span class="kw">use </span><span class="kw">crate</span>::error::Error;
 
-<span class="kw">use crate</span>::{request::Request, build_request};
+<span class="kw">use crate</span>::{assert::assert_in_range, error::Error, request::Request, build_request};
 
 <span class="macro">macro_rules! </span>log {
 	(<span class="macro-nonterminal">$text</span>: literal, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro">println!</span>(<span class="macro">concat!</span>(<span class="string">&quot;[B15F] &quot;</span>, <span class="macro-nonterminal">$text</span>), $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
@@ -435,28 +492,87 @@
 	<span class="doccomment">/// Sets the value of the specified port
 	///
 	/// # Errors 
-	/// `port` can either be 0 or 1, other values will cause a compile-time
+	/// `PORT` can either be 0 or 1, other values will cause a compile-time
 	/// error. Otherwise an `error::Error` is generated if communication
 	/// with the B15 fails.
 	/// 
 	/// # Examples
+	/// ```
+	/// use b15f::B15F;
 	/// 
-	</span><span class="kw">pub fn </span>digital_write&lt;<span class="kw">const </span>port: u8&gt; (<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="macro">assert!</span>(port == <span class="number">0 </span>|| port == <span class="number">1</span>);
+	/// fn main() -&gt; Result&lt;(), String&gt; {
+	/// 	let mut drv = B15F::new()?;
+	/// 
+	/// 	drv.digital_write::&lt;0&gt;(0xFF)?;		// Turn on all bits of port 0
+	/// 	drv.digital_write::&lt;1&gt;(0x0F)?;		// Turn on bits 0-4 of port 1
+	/// 
+	/// 	// drv.digital_write::&lt;2&gt;(0xFF);	// Compiler error
+	/// 
+	/// 	Ok(())
+	/// }
+	/// ```
+	/// 
+	</span><span class="kw">pub fn </span>digital_write&lt;<span class="kw">const </span>PORT: usize&gt; (<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+		assert_in_range::&lt;PORT, <span class="number">0</span>, <span class="number">1</span>&gt;();
 
 		<span class="kw">let </span>reversed = value.reverse_bits();
-		<span class="kw">let </span>request = <span class="kw">if </span>port == <span class="number">0 </span>{ Request::DigitalWrite0 } <span class="kw">else </span>{ Request::DigitalWrite1 };
-
+		<span class="kw">let </span>request = <span class="kw">match </span>PORT { 
+			<span class="number">0 </span>=&gt; Request::DigitalWrite0,
+			<span class="number">1 </span>=&gt; Request::DigitalWrite1,
+			<span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Report this issue to someone, this should not ever be visible.&quot;</span>)
+		};
+		
 		<span class="self">self</span>.usart.write(<span class="macro">build_request!</span>[request, reversed])<span class="question-mark">?</span>;
 
 		<span class="kw">let </span><span class="kw-2">mut </span>aw: [u8; <span class="number">1</span>] = [<span class="number">0</span>; <span class="number">1</span>];
 		<span class="self">self</span>.usart.read(<span class="kw-2">&amp;mut </span>aw)<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>aw[<span class="number">0</span>] != B15F::MSG_OK {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Setting Port {} failed&quot;</span>, port).into());
+			<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Setting Port {} failed&quot;</span>, PORT).into());
 		}
 
 		<span class="prelude-val">Ok</span>(())
+	}
+
+	<span class="doccomment">/// Reads the value of the specified port
+	///
+	/// # Errors 
+	/// `PORT` can either be 0 or 1, other values will cause a compile-time
+	/// error. Otherwise an `error::Error` is generated if communication
+	/// with the B15 fails.
+	/// 
+	/// # Examples
+	/// ```
+	/// use b15f::B15F;
+	/// 
+	/// fn main() -&gt; Result&lt;(), String&gt; {
+	/// 	let mut drv = B15F::new()?;
+	/// 
+	/// 	let _ = drv.digital_read::&lt;0&gt;()?;		// Read inputs of port 0
+	/// 	let _ = drv.digital_read::&lt;1&gt;()?;		// Read inputs of port 1
+	/// 
+	/// 	// drv.digital_read::&lt;2&gt;();				// Compiler error
+	/// 
+	/// 	Ok(())
+	/// }
+	/// ```
+	///
+	</span><span class="kw">pub fn </span>digital_read&lt;<span class="kw">const </span>PORT: usize&gt; (<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u8, Error&gt; {
+	 	assert_in_range::&lt;PORT, <span class="number">0</span>, <span class="number">1</span>&gt;();
+
+		<span class="kw">let </span>request = <span class="kw">match </span>PORT {
+			<span class="number">0 </span>=&gt; Request::DigitalRead0,
+			<span class="number">1 </span>=&gt; Request::DigitalRead1,
+			<span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Report this issue to someone, this should not ever be visible.&quot;</span>)
+		};
+
+		<span class="self">self</span>.usart.clear(serialport::ClearBuffer::Input)<span class="question-mark">?</span>;
+		<span class="self">self</span>.usart.write(<span class="macro">build_request!</span>[request])<span class="question-mark">?</span>;
+
+		<span class="kw">let </span><span class="kw-2">mut </span>aw: [u8; <span class="number">1</span>] = [<span class="number">0</span>; <span class="number">1</span>];
+		<span class="self">self</span>.usart.read(<span class="kw-2">&amp;mut </span>aw)<span class="question-mark">?</span>;
+
+		<span class="prelude-val">Ok</span>(u8::reverse_bits(aw[<span class="number">0</span>]))
 	}
 
 	<span class="doccomment">/// Yields information about the installed firmware on the B15

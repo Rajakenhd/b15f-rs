@@ -35,6 +35,12 @@ impl From<String> for Error {
 	}
 }
 
+impl From<Error> for String {
+	fn from(err: Error) -> Self {
+		err.message	
+	}
+}
+
 impl Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", self.message)

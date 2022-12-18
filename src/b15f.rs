@@ -118,18 +118,36 @@ impl B15F {
 	/// Sets the value of the specified port
 	///
 	/// # Errors 
-	/// `port` can either be 0 or 1, other values will cause a compile-time
+	/// `PORT` can either be 0 or 1, other values will cause a compile-time
 	/// error. Otherwise an `error::Error` is generated if communication
 	/// with the B15 fails.
 	/// 
 	/// # Examples
+	/// ```
+	/// use b15f::B15F;
+	/// 
+	/// fn main() -> Result<(), String> {
+	/// 	let mut drv = B15F::new()?;
+	/// 
+	/// 	drv.digital_write::<0>(0xFF)?;		// Turn on all bits of port 0
+	/// 	drv.digital_write::<1>(0x0F)?;		// Turn on bits 0-4 of port 1
+	/// 
+	/// 	// drv.digital_write::<2>(0xFF);	// Compiler error
+	/// 
+	/// 	Ok(())
+	/// }
+	/// ```
 	/// 
 	pub fn digital_write<const PORT: usize> (&mut self, value: u8) -> Result<(), Error> {
 		assert_in_range::<PORT, 0, 1>();
 
 		let reversed = value.reverse_bits();
-		let request = if PORT == 0 { Request::DigitalWrite0 } else { Request::DigitalWrite1 };
-
+		let request = match PORT { 
+			0 => Request::DigitalWrite0,
+			1 => Request::DigitalWrite1,
+			_ => panic!("Report this issue to someone, this should not ever be visible.")
+		};
+		
 		self.usart.write(build_request![request, reversed])?;
 
 		let mut aw: [u8; 1] = [0; 1];
@@ -140,6 +158,47 @@ impl B15F {
 		}
 
 		Ok(())
+	}
+
+	/// Reads the value of the specified port
+	///
+	/// # Errors 
+	/// `PORT` can either be 0 or 1, other values will cause a compile-time
+	/// error. Otherwise an `error::Error` is generated if communication
+	/// with the B15 fails.
+	/// 
+	/// # Examples
+	/// ```
+	/// use b15f::B15F;
+	/// 
+	/// fn main() -> Result<(), String> {
+	/// 	let mut drv = B15F::new()?;
+	/// 
+	/// 	let _ = drv.digital_read::<0>()?;		// Read inputs of port 0
+	/// 	let _ = drv.digital_read::<1>()?;		// Read inputs of port 1
+	/// 
+	/// 	// drv.digital_read::<2>();				// Compiler error
+	/// 
+	/// 	Ok(())
+	/// }
+	/// ```
+	///
+	pub fn digital_read<const PORT: usize> (&mut self) -> Result<u8, Error> {
+	 	assert_in_range::<PORT, 0, 1>();
+
+		let request = match PORT {
+			0 => Request::DigitalRead0,
+			1 => Request::DigitalRead1,
+			_ => panic!("Report this issue to someone, this should not ever be visible.")
+		};
+
+		self.usart.clear(serialport::ClearBuffer::Input)?;
+		self.usart.write(build_request![request])?;
+
+		let mut aw: [u8; 1] = [0; 1];
+		self.usart.read(&mut aw)?;
+
+		Ok(u8::reverse_bits(aw[0]))
 	}
 
 	/// Yields information about the installed firmware on the B15
