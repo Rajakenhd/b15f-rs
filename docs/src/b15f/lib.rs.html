@@ -22,7 +22,6 @@
 </pre><pre class="rust"><code><span class="attribute">#![deny(missing_docs,
     missing_debug_implementations,
     trivial_casts,
-    unsafe_code,
     unstable_features,
     unused_import_braces, unused_qualifications)]
 
@@ -35,6 +34,7 @@
 //! [`original`]: https://github.com/devfix/b15f
 
 </span><span class="kw">pub mod </span>b15f;
+<span class="kw">mod </span>usart;
 <span class="kw">mod </span>request;
 <span class="kw">mod </span>error;
 <span class="kw">mod </span>assert;
