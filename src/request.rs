@@ -25,5 +25,6 @@ pub enum Request {
 	DigitalWrite0 	= 5,
 	DigitalWrite1 	= 6,
 	DigitalRead0	= 7,
-	DigitalRead1	= 8
+	DigitalRead1	= 8,
+	ReadDipSwitch	= 9
 }

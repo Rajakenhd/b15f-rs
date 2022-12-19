@@ -233,6 +233,35 @@ impl B15F {
 		Ok(u8::reverse_bits(aw[0]))
 	}
 
+	/// Reads the value  of the DIP switch (S7)
+	/// 
+	/// # Returns
+	/// A bitfield representing the value of all 8 DIP switches. The least
+	/// significant bit represents switch 1.
+	/// 
+	/// # Errors
+	/// When communication with the board fails an `error::Error` is returned.
+	/// 
+	/// # Example
+	/// ```
+	/// use b15f::B15F;
+	/// 
+	/// fn main() -> Result<(), String> {
+	/// 	let mut drv = B15F::new()?;
+	/// 
+	/// 	println!("{}", drv.read_dip_switch()?);
+	/// 
+	/// 	Ok(())
+	/// }
+	/// ```
+	pub fn read_dip_switch(&mut self) -> Result<u8, Error> {
+		self.usart.clear(serialport::ClearBuffer::Input)?;
+		self.usart.write(build_request!(Request::ReadDipSwitch))?;
+		
+		let aw = read_sized::<1>(&mut self.usart)?;
+		Ok(aw[0].reverse_bits())
+	}
+
 	/// Yields information about the installed firmware on the B15
 	/// 
 	/// Returns an array of strings, where each string contains a piece
