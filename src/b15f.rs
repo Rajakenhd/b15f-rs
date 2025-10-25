@@ -6,7 +6,7 @@ use std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
 use std::io::Write;
 use rand::Rng;
 use serialport::SerialPort;
-use avrd::atmega1284p as mcu;
+use crate::atmega1284p as mcu;
 
 use crate::{assert::assert_in_range, error::Error, request::Request, usart::read_sized, build_request};
 
@@ -265,9 +265,10 @@ impl B15F {
 	}
 
 	/// Uses the setMem8 syntax from the cpp library.
-	pub fn set_register<const ADDR: usize>(&mut self, val: u8) -> Result<(), Error> {
+	pub fn set_register(&mut self, register: mcu::DataRegister, val: u8) -> Result<(), Error> {
 		self.usart.clear(serialport::ClearBuffer::Input)?;
-		self.usart.write(build_request![Request::SetMem8, ADDR & 0xFF, ADDR >> 8, val])?;
+		let addr = register as u8;
+		self.usart.write(build_request![Request::SetMem8, addr & 0xFF, 0, val])?;
 
 		if read_sized::<1>(&mut self.usart)?[0] != B15F::MSG_OK {
 			return Err("Setting register failed".into());
@@ -275,9 +276,11 @@ impl B15F {
 		Ok(())
 	}
 
-	pub fn get_register<const ADDR: usize>(&mut self) -> Result<u8, Error> {
+	/// read register value
+	pub fn get_register(&mut self, register: mcu::DataRegister) -> Result<u8, Error> {
 		self.usart.clear(serialport::ClearBuffer::Input)?;
-		self.usart.write(build_request![Request::GetMem8, ADDR & 0xFF, ADDR >> 8])?;
+		let addr = register as u8;
+		self.usart.write(build_request![Request::GetMem8, addr & 0xFF, 0])?;
 		Ok(read_sized::<1>(&mut self.usart)?[0])
 	}
 
@@ -359,7 +362,7 @@ impl B15F {
 	/// If an error occurs in the conversion or the communication with the
 	/// board, an `error::Error` will be returned.
 	pub fn test_int_conv(&mut self) -> Result<(), Error> {
-		let dummy: u16 = rand::thread_rng().gen_range(0x0000..=(0xFFFF / 3));
+		let dummy: u16 = rand::rng().random_range(0x0000..=(0xFFFF / 3));
 		
 		self.usart.write(build_request!(Request::IntTest, dummy & 0xFF, dummy >> 8))?;
 
@@ -396,7 +399,7 @@ impl B15F {
 	/// }
 	/// ```
 	pub fn test_connection(&mut self) -> Result<(), Error> {
-		let dummy: u8 = rand::thread_rng().gen_range(0x00..=0xFF);
+		let dummy: u8 = rand::rng().random_range(0x00..=0xFF);
 
 		self.usart.write(build_request![Request::Test, dummy])?;
 		
