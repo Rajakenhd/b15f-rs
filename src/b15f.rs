@@ -3,8 +3,10 @@
 //! for the B15, this is the module you want to use.
 
 use std::{process::Command, time::Duration, fmt::Debug, thread::sleep};
+use std::io::Write;
 use rand::Rng;
 use serialport::SerialPort;
+use avrd::atmega1284p as mcu;
 
 use crate::{assert::assert_in_range, error::Error, request::Request, usart::read_sized, build_request};
 
@@ -260,6 +262,23 @@ impl B15F {
 		
 		let aw = read_sized::<1>(&mut self.usart)?;
 		Ok(aw[0].reverse_bits())
+	}
+
+	/// Uses the setMem8 syntax from the cpp library.
+	pub fn set_register<const ADDR: usize>(&mut self, val: u8) -> Result<(), Error> {
+		self.usart.clear(serialport::ClearBuffer::Input)?;
+		self.usart.write(build_request![Request::SetMem8, ADDR & 0xFF, ADDR >> 8, val])?;
+
+		if read_sized::<1>(&mut self.usart)?[0] != B15F::MSG_OK {
+			return Err("Setting register failed".into());
+		}
+		Ok(())
+	}
+
+	pub fn get_register<const ADDR: usize>(&mut self) -> Result<u8, Error> {
+		self.usart.clear(serialport::ClearBuffer::Input)?;
+		self.usart.write(build_request![Request::GetMem8, ADDR & 0xFF, ADDR >> 8])?;
+		Ok(read_sized::<1>(&mut self.usart)?[0])
 	}
 
 	/// Yields information about the installed firmware on the B15
